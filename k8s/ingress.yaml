@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: todolist-ingress
+  namespace: default
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    # Uncomment the following line and apply middleware.yaml if your Traefik installation
+    # has the TraefikCRD (Middleware) enabled. This will strip the /webui prefix before
+    # routing to the Vue app, allowing it to serve at root.
+    # traefik.ingress.kubernetes.io/router.middlewares: default-stripprefix-webui@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: todolist.local
+      http:
+        paths:
+          # API endpoint - route /todos to todo-api service
+          - path: /todos
+            pathType: Prefix
+            backend:
+              service:
+                name: todo-api
+                port:
+                  number: 8080
+
+          # Vue SPA - route / to todolist-vue service
+          # The app is served at root and configured with API_BASE_URL=/todos
+          # If using middleware (see annotations above), requests to /webui/* will have
+          # the prefix stripped before reaching this route.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: todolist-vue
+                port:
+                  number: 8080
+```
+
+Now let me create the middleware.yaml file:
