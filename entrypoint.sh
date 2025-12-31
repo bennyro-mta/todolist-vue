@@ -12,8 +12,13 @@ INDEX_HTML_PATH="${HTML_DIR}/index.html"
 API_BASE_URL=${API_BASE_URL:-/}
 
 echo "Initializing runtime configuration..."
-echo "API_BASE_URL=${API_BASE_URL}"
+echo "API_BASE_URL=${API_BASE_URL:-/}"
 echo "HTML_DIR=${HTML_DIR}"
+# Prepare JSON values for JS (safe defaults when env vars are unset)
+# API base defaults to "/" if unset or empty
+if [ -n "${API_BASE_URL:-}" ]; then API_BASE_URL_JSON="\"$API_BASE_URL\""; else API_BASE_URL_JSON="\"/\""; fi
+# Compute TITLE from USER ("$USER's TODOS" or "My TODOS")
+if [ -n "${USER:-}" ]; then TITLE_JSON="\"$USER's TODOS\""; else TITLE_JSON="\"My TODOS\""; fi
 
 # Generate config.js with the runtime API base
 cat > "${CONFIG_JS_PATH}" <<EOF
@@ -21,7 +26,8 @@ cat > "${CONFIG_JS_PATH}" <<EOF
 // Do NOT edit manually inside the running container; modify the entrypoint instead.
 (function () {
   window.APP_CONFIG = window.APP_CONFIG || {};
-  window.APP_CONFIG.API_BASE_URL = ${API_BASE_URL:+\"$API_BASE_URL\"};
+  window.APP_CONFIG.API_BASE_URL = ${API_BASE_URL_JSON};
+  window.APP_CONFIG.TITLE = ${TITLE_JSON};
 })();
 EOF
 

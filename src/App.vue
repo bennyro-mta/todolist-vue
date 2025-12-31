@@ -1,78 +1,154 @@
 <template>
-  <div style="max-width: 720px; margin: 24px auto; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;">
-    <h1 style="margin: 0 0 16px;">Todo List</h1>
-
-    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
-      <button @click="fetchTodos" :disabled="loading">Reload</button>
-      <span v-if="loading" style="color: #555;">Loading…</span>
-      <span v-if="error" style="color: #b00020;">{{ error }}</span>
-    </div>
-
-    <fieldset style="border: 1px solid #ddd; padding: 12px; margin-bottom: 16px;">
-      <legend>Add Todo</legend>
-      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-        <input
-          v-model="newTask"
-          type="text"
-          placeholder="Task description"
-          style="flex: 1; min-width: 240px; padding: 6px;"
-          @keyup.enter="addTodo"
-        />
-        <select v-model="newStatus" style="padding: 6px;">
-          <option v-for="s in STATUS_OPTIONS" :key="s" :value="s">{{ s }}</option>
-        </select>
-        <button @click="addTodo" :disabled="loading">Add</button>
-      </div>
-    </fieldset>
-
-    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
-      <label for="filter">Filter:</label>
-      <select id="filter" v-model="filterStatus" style="padding: 6px;">
-        <option value="">(all)</option>
-        <option v-for="s in STATUS_OPTIONS" :key="s" :value="s">{{ s }}</option>
-      </select>
-    </div>
-
-    <div v-if="filteredTodos.length === 0" style="color: #777; font-style: italic;">
-      No todos to show.
-    </div>
-
-    <ul style="list-style: none; padding: 0; margin: 0;">
-      <li
-        v-for="todo in filteredTodos"
-        :key="todo.id"
-        style="border: 1px solid #eee; padding: 10px; margin-bottom: 8px; border-radius: 6px;"
-      >
-        <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-          <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <strong>#{{ todo.id }}</strong>
-              <input
-                :value="todo.task"
-                @change="updateTodoTask(todo, $event.target.value)"
-                style="flex: 1; min-width: 240px; padding: 6px;"
-              />
+    <div class="app">
+        <header class="app-header">
+            <h1>{{ appTitle }}</h1>
+            <div class="header-actions">
+                <button class="btn" @click="fetchTodos" :disabled="loading">
+                    Reload
+                </button>
+                <button
+                    class="icon-btn"
+                    @click="toggleTheme"
+                    :title="
+                        theme === 'dark'
+                            ? 'Switch to light theme'
+                            : 'Switch to dark theme'
+                    "
+                    aria-label="Toggle theme"
+                >
+                    <!-- Sun/Moon icon -->
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <circle
+                            v-if="theme === 'light'"
+                            cx="12"
+                            cy="12"
+                            r="5"
+                        ></circle>
+                        <path
+                            v-else
+                            d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                        ></path>
+                    </svg>
+                </button>
+                <span v-if="loading" class="hint">Loading…</span>
+                <span v-if="error" class="error">{{ error }}</span>
             </div>
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <label>Status:</label>
-              <select
-                :value="todo.status || 'Todo'"
-                @change="updateTodoStatus(todo, $event.target.value)"
-                style="padding: 6px;"
-              >
-                <option v-for="s in STATUS_OPTIONS" :key="s" :value="s">{{ s }}</option>
-              </select>
+        </header>
+
+        <section class="card">
+            <h2 class="card-title">Add Todo</h2>
+            <div class="form-row">
+                <input
+                    class="input task-input"
+                    v-model="newTask"
+                    type="text"
+                    placeholder="What needs doing?"
+                    @keyup.enter="addTodo"
+                    aria-label="New todo task"
+                />
+                <button
+                    class="btn primary"
+                    @click="addTodo"
+                    :disabled="loading"
+                >
+                    Add
+                </button>
             </div>
-          </div>
-          <div>
-            <button @click="deleteTodo(todo.id)" :disabled="loading" style="background: #b00020; color: white; border: none; padding: 8px 10px; border-radius: 4px;">
-              Delete
-            </button>
-          </div>
+        </section>
+
+        <section class="toolbar">
+            <label for="filter" class="label">Filter:</label>
+            <select
+                id="filter"
+                class="select"
+                v-model="filterStatus"
+                aria-label="Filter by status"
+            >
+                <option value="">All</option>
+                <option v-for="s in STATUS_OPTIONS" :key="s" :value="s">
+                    {{ s }}
+                </option>
+            </select>
+        </section>
+
+        <div v-if="filteredTodos.length === 0" class="empty">
+            No todos to show. Add one above!
         </div>
-      </li>
-    </ul>
-  </div>
+
+        <ul class="todo-list">
+            <li v-for="todo in filteredTodos" :key="todo.id" class="todo-item">
+                <div class="todo-content">
+                    <div class="todo-main">
+                        <div class="todo-id">#{{ todo.id }}</div>
+                        <input
+                            class="input task-input"
+                            :value="todo.task"
+                            @change="updateTodoTask(todo, $event.target.value)"
+                            aria-label="Edit task"
+                        />
+                    </div>
+                    <div class="todo-meta">
+                        <label class="label">Status</label>
+                        <select
+                            class="select"
+                            :value="todo.status || 'Todo'"
+                            @change="
+                                updateTodoStatus(todo, $event.target.value)
+                            "
+                            aria-label="Edit status"
+                        >
+                            <option
+                                v-for="s in STATUS_OPTIONS"
+                                :key="s"
+                                :value="s"
+                            >
+                                {{ s }}
+                            </option>
+                        </select>
+                        <button
+                            class="icon-btn danger"
+                            @click="deleteTodo(todo.id)"
+                            :disabled="loading"
+                            aria-label="Delete todo"
+                            title="Delete"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path
+                                    d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+                                ></path>
+                                <path d="M10 11v6"></path>
+                                <path d="M14 11v6"></path>
+                                <path
+                                    d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"
+                                ></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </li>
+        </ul>
+    </div>
 </template>
 
 <script>
@@ -81,183 +157,450 @@ import axios from "axios";
 const STATUS_OPTIONS = ["Todo", "In Progress", "Complete"];
 
 export default {
-  name: "App",
-  data() {
-    const apiBase =
-      (typeof window !== "undefined" &&
-        window.APP_CONFIG &&
-        window.APP_CONFIG.API_BASE_URL) ||
-      import.meta.env.VITE_API_BASE_URL ||
-      "/";
-    // Simple startup logs to aid debugging
-    console.log("[App.vue] Using API base URL:", apiBase);
+    name: "App",
+    data() {
+        const apiBase =
+            (typeof window !== "undefined" &&
+                window.APP_CONFIG &&
+                window.APP_CONFIG.API_BASE_URL) ||
+            import.meta.env.VITE_API_BASE_URL ||
+            "/";
 
-    return {
-      apiBase,
-      http: axios.create({
-        baseURL: apiBase,
-        headers: { "Content-Type": "application/json" },
-      }),
-      todos: [],
-      loading: false,
-      error: null,
-      newTask: "",
-      newStatus: "Todo",
-      filterStatus: "",
-    };
-  },
-  computed: {
-    STATUS_OPTIONS() {
-      return STATUS_OPTIONS;
+        // Load persisted theme or default to dark
+        const savedTheme =
+            (typeof localStorage !== "undefined" &&
+                localStorage.getItem("theme")) ||
+            "dark";
+
+        return {
+            apiBase,
+            http: axios.create({
+                baseURL: apiBase,
+                headers: { "Content-Type": "application/json" },
+            }),
+            todos: [],
+            loading: false,
+            error: null,
+            newTask: "",
+            newStatus: "Todo", // default; not shown in Add Todo form
+            filterStatus: "",
+            theme: savedTheme,
+        };
     },
-    filteredTodos() {
-      const status = (this.filterStatus || "").trim();
-      if (!status) return this.todos;
-      return this.todos.filter((t) => (t.status || "Todo") === status);
+    computed: {
+        STATUS_OPTIONS() {
+            return STATUS_OPTIONS;
+        },
+        appTitle() {
+            const title =
+                (typeof window !== "undefined" &&
+                    window.APP_CONFIG &&
+                    window.APP_CONFIG.TITLE) ||
+                null;
+            return title || "My TODOS";
+        },
+        filteredTodos() {
+            const status = (this.filterStatus || "").trim();
+            if (!status) return this.todos;
+            return this.todos.filter((t) => (t.status || "Todo") === status);
+        },
     },
-  },
-  async created() {
-    console.log("[App.vue] created() lifecycle hook fired");
-    await this.fetchTodos().catch((err) => {
-      const msg = err?.message || "fetchTodos failed";
-      console.error("[App.vue] created() fetchTodos error:", msg, err);
-    });
-  },
-  methods: {
-    _fmtErr(err, fallback) {
-      const msg =
-        err?.response?.data?.error ||
-        err?.message ||
-        fallback ||
-        "Unexpected error";
-      return msg;
+    async created() {
+        this.applyTheme(this.theme);
+        await this.fetchTodos().catch((err) => {
+            const msg = err?.message || "fetchTodos failed";
+            console.error("[App.vue] created() fetchTodos error:", msg, err);
+        });
     },
-    async fetchTodos() {
-      console.log("[App.vue] fetchTodos() -> GET /todos");
-      this.loading = true;
-      this.error = null;
-      try {
-        const { data } = await this.http.get("/todos");
-        console.log("[App.vue] fetchTodos() response:", data);
-        this.todos = Array.isArray(data)
-          ? data.map((t) => ({ ...t, status: t.status || "Todo" }))
-          : [];
-      } catch (err) {
-        const formatted = this._fmtErr(err, "Failed to load todos");
-        console.error("[App.vue] fetchTodos() error:", formatted, err);
-        this.error = formatted;
-      } finally {
-        this.loading = false;
-        console.log(
-          "[App.vue] fetchTodos() complete. loading=",
-          this.loading,
-          "todos=",
-          this.todos.length
-        );
-      }
+    methods: {
+        toggleTheme() {
+            this.theme = this.theme === "dark" ? "light" : "dark";
+            this.applyTheme(this.theme);
+            try {
+                localStorage.setItem("theme", this.theme);
+            } catch {}
+        },
+        applyTheme(theme) {
+            const root = document.documentElement;
+            root.setAttribute("data-theme", theme);
+        },
+        _fmtErr(err, fallback) {
+            const msg =
+                err?.response?.data?.error ||
+                err?.message ||
+                fallback ||
+                "Unexpected error";
+            return msg;
+        },
+        async fetchTodos() {
+            this.loading = true;
+            this.error = null;
+            try {
+                const { data } = await this.http.get("/todos");
+                this.todos = Array.isArray(data)
+                    ? data.map((t) => ({ ...t, status: t.status || "Todo" }))
+                    : [];
+            } catch (err) {
+                this.error = this._fmtErr(err, "Failed to load todos");
+            } finally {
+                this.loading = false;
+            }
+        },
+        async addTodo() {
+            const task = this.newTask.trim();
+            if (!task) {
+                this.error = "Task cannot be empty";
+                return;
+            }
+            this.loading = true;
+            this.error = null;
+            try {
+                const { data } = await this.http.post("/todos", { task });
+                const created = data;
+                const desiredStatus = this.newStatus || "Todo";
+                if (desiredStatus && desiredStatus !== created.status) {
+                    await this.http.patch(`/todos/${created.id}`, {
+                        status: desiredStatus,
+                    });
+                    created.status = desiredStatus;
+                }
+                this.todos.unshift(created);
+                this.newTask = "";
+                this.newStatus = "Todo";
+            } catch (err) {
+                this.error = this._fmtErr(err, "Failed to add todo");
+            } finally {
+                this.loading = false;
+            }
+        },
+        async updateTodoStatus(todo, status) {
+            if (!STATUS_OPTIONS.includes(status)) {
+                this.error = "Invalid status";
+                return;
+            }
+            this.loading = true;
+            this.error = null;
+            try {
+                await this.http.patch(`/todos/${todo.id}`, { status });
+                todo.status = status;
+            } catch (err) {
+                this.error = this._fmtErr(err, "Failed to update status");
+            } finally {
+                this.loading = false;
+            }
+        },
+        async updateTodoTask(todo, newTask) {
+            const task = String(newTask || "").trim();
+            if (!task) {
+                this.error = "Task cannot be empty";
+                return;
+            }
+            this.loading = true;
+            this.error = null;
+            try {
+                await this.http.patch(`/todos/${todo.id}`, { task });
+                todo.task = task;
+            } catch (err) {
+                this.error = this._fmtErr(err, "Failed to update task");
+            } finally {
+                this.loading = false;
+            }
+        },
+        async deleteTodo(id) {
+            this.loading = true;
+            this.error = null;
+            try {
+                await this.http.delete(`/todos/${id}`);
+                this.todos = this.todos.filter((t) => t.id !== id);
+            } catch (err) {
+                this.error = this._fmtErr(err, "Failed to delete todo");
+            } finally {
+                this.loading = false;
+            }
+        },
     },
-    async addTodo() {
-      const task = this.newTask.trim();
-      console.log("[App.vue] addTodo() -> POST /todos", {
-        task,
-        desiredStatus: this.newStatus,
-      });
-      if (!task) {
-        this.error = "Task cannot be empty";
-        console.warn("[App.vue] addTodo() aborted: empty task");
-        return;
-      }
-      this.loading = true;
-      this.error = null;
-      try {
-        const { data } = await this.http.post("/todos", { task });
-        const created = data;
-        console.log("[App.vue] addTodo() created:", created);
-        const desiredStatus = this.newStatus || "Todo";
-        if (desiredStatus && desiredStatus !== created.status) {
-          await this.http.patch(`/todos/${created.id}`, {
-            status: desiredStatus,
-          });
-          created.status = desiredStatus;
-          console.log("[App.vue] addTodo() status updated to:", desiredStatus);
-        }
-        this.todos.unshift(created);
-        this.newTask = "";
-        this.newStatus = "Todo";
-      } catch (err) {
-        const formatted = this._fmtErr(err, "Failed to add todo");
-        console.error("[App.vue] addTodo() error:", formatted, err);
-        this.error = formatted;
-      } finally {
-        this.loading = false;
-      }
-    },
-    async updateTodoStatus(todo, status) {
-      console.log("[App.vue] updateTodoStatus() -> PATCH /todos/:id", {
-        id: todo.id,
-        status,
-      });
-      if (!STATUS_OPTIONS.includes(status)) {
-        this.error = "Invalid status";
-        console.warn("[App.vue] updateTodoStatus() aborted: invalid status", status);
-        return;
-      }
-      this.loading = true;
-      this.error = null;
-      try {
-        await this.http.patch(`/todos/${todo.id}`, { status });
-        todo.status = status;
-      } catch (err) {
-        const formatted = this._fmtErr(err, "Failed to update status");
-        console.error("[App.vue] updateTodoStatus() error:", formatted, err);
-        this.error = formatted;
-      } finally {
-        this.loading = false;
-      }
-    },
-    async updateTodoTask(todo, newTask) {
-      const task = String(newTask || "").trim();
-      console.log("[App.vue] updateTodoTask() -> PATCH /todos/:id", {
-        id: todo.id,
-        task,
-      });
-      if (!task) {
-        this.error = "Task cannot be empty";
-        console.warn("[App.vue] updateTodoTask() aborted: empty task");
-        return;
-      }
-      this.loading = true;
-      this.error = null;
-      try {
-        await this.http.patch(`/todos/${todo.id}`, { task });
-        todo.task = task;
-      } catch (err) {
-        const formatted = this._fmtErr(err, "Failed to update task");
-        console.error("[App.vue] updateTodoTask() error:", formatted, err);
-        this.error = formatted;
-      } finally {
-        this.loading = false;
-      }
-    },
-    async deleteTodo(id) {
-      console.log("[App.vue] deleteTodo() -> DELETE /todos/:id", { id });
-      this.loading = true;
-      this.error = null;
-      try {
-        await this.http.delete(`/todos/${id}`);
-        this.todos = this.todos.filter((t) => t.id !== id);
-      } catch (err) {
-        const formatted = this._fmtErr(err, "Failed to delete todo");
-        console.error("[App.vue] deleteTodo() error:", formatted, err);
-        this.error = formatted;
-      } finally {
-        this.loading = false;
-      }
-    },
-  },
 };
 </script>
 
 <style>
-/* You can add minimal styling or leave inline styles in the template */
+:root {
+    /* Dark theme (default) */
+    --bg: #0f172a;
+    --panel: #111827;
+    --muted: #6b7280;
+    --text: #e5e7eb;
+    --primary: #2563eb;
+    --danger: #dc2626;
+    --border: #1f2937;
+    --accent: #374151;
+
+    /* Controls */
+    --control-bg: #0b1220;
+    --control-border: var(--accent);
+    --control-hover-bg: #0d1426;
+}
+
+:root[data-theme="light"] {
+    /* Light theme */
+    --bg: #f8fafc;
+    --panel: #ffffff;
+    --muted: #6b7280;
+    --text: #0f172a;
+    --primary: #2563eb;
+    --danger: #dc2626;
+    --border: #e5e7eb;
+    --accent: #d1d5db;
+
+    /* Controls */
+    --control-bg: #ffffff;
+    --control-border: var(--accent);
+    --control-hover-bg: #f3f4f6; /* light hover */
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family:
+        system-ui,
+        -apple-system,
+        Segoe UI,
+        Roboto,
+        sans-serif;
+}
+
+.app {
+    max-width: 840px;
+    margin: 32px auto;
+    padding: 0 16px;
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.app-header h1 {
+    margin: 0;
+    font-size: 28px;
+    letter-spacing: 0.2px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 12px 0 20px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+}
+
+.card-title {
+    margin: 0 0 12px;
+    font-size: 18px;
+    color: var(--text);
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0 16px;
+}
+
+.form-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.form-row .task-input {
+    flex: 1;
+    min-width: 320px;
+}
+
+.input,
+.select {
+    background: var(--control-bg);
+    color: var(--text);
+    border: 1px solid var(--control-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    outline: none;
+}
+
+.input:focus,
+.select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.task-input {
+    flex: 1;
+    min-width: 240px;
+}
+
+.btn {
+    appearance: none;
+    border: 1px solid var(--control-border);
+    background: var(--control-bg);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition:
+        transform 0.05s ease,
+        background 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.btn:hover {
+    background: var(--control-hover-bg);
+    border-color: var(--text);
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn.primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff; /* ensure readable text in both themes */
+}
+
+.btn.primary:hover {
+    background: #1f57d0;
+    border-color: #1f57d0;
+}
+
+.btn.danger {
+    background: var(--danger);
+    border-color: var(--danger);
+}
+
+/* Icon button style for inline delete */
+.icon-btn {
+    appearance: none;
+    border: 1px solid var(--control-border);
+    background: var(--control-bg);
+    color: var(--text);
+    padding: 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+        transform 0.05s ease,
+        background 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.icon-btn:hover {
+    background: var(--control-hover-bg);
+    border-color: var(--text);
+}
+
+.icon-btn.danger {
+    color: #fca5a5;
+    border-color: var(--danger);
+}
+
+.icon-btn.danger:hover {
+    background: #b91c1c;
+    color: #fff;
+    border-color: #b91c1c;
+}
+
+.btn.danger:hover {
+    background: #b91c1c;
+    border-color: #b91c1c;
+}
+
+.label {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.hint {
+    color: var(--muted);
+}
+
+.error {
+    color: #fca5a5;
+}
+
+.empty {
+    color: var(--muted);
+    font-style: italic;
+    padding: 16px;
+    text-align: center;
+}
+
+.todo-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.todo-item {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.todo-content {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.todo-main {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex: 1;
+}
+
+.todo-id {
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.todo-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.todo-actions {
+    margin-top: 8px;
+    display: flex;
+    justify-content: flex-end;
+}
+.app-footer {
+    margin-top: 24px;
+    color: var(--muted);
+    text-align: center;
+}
 </style>

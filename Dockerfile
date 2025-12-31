@@ -40,6 +40,7 @@ LABEL org.opencontainers.image.title="TodoList Vue Frontend" \
 
 # Copy built assets
 COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/static /usr/share/nginx/html/static
 
 # Replace default server config with SPA-friendly config
 RUN rm -f /etc/nginx/conf.d/default.conf
