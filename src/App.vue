@@ -159,12 +159,13 @@ const STATUS_OPTIONS = ["Todo", "In Progress", "Complete"];
 export default {
     name: "App",
     data() {
-        const apiBase =
+        const rawApiBase =
             (typeof window !== "undefined" &&
                 window.APP_CONFIG &&
                 window.APP_CONFIG.API_BASE_URL) ||
-            import.meta.env.VITE_API_BASE_URL ||
-            "/";
+            "";
+        const apiBase = String(rawApiBase || "");
+        const base = apiBase.endsWith("/") ? apiBase : apiBase + "/";
 
         // Load persisted theme or default to dark
         const savedTheme =
@@ -173,9 +174,9 @@ export default {
             "dark";
 
         return {
-            apiBase,
+            apiBase: base,
             http: axios.create({
-                baseURL: apiBase,
+                baseURL: base,
                 headers: { "Content-Type": "application/json" },
             }),
             todos: [],
@@ -236,7 +237,7 @@ export default {
             this.loading = true;
             this.error = null;
             try {
-                const { data } = await this.http.get("/todos");
+                const { data } = await this.http.get("");
                 this.todos = Array.isArray(data)
                     ? data.map((t) => ({ ...t, status: t.status || "Todo" }))
                     : [];
@@ -255,11 +256,11 @@ export default {
             this.loading = true;
             this.error = null;
             try {
-                const { data } = await this.http.post("/todos", { task });
+                const { data } = await this.http.post("", { task });
                 const created = data;
                 const desiredStatus = this.newStatus || "Todo";
                 if (desiredStatus && desiredStatus !== created.status) {
-                    await this.http.patch(`/todos/${created.id}`, {
+                    await this.http.patch(`${created.id}`, {
                         status: desiredStatus,
                     });
                     created.status = desiredStatus;
@@ -281,7 +282,7 @@ export default {
             this.loading = true;
             this.error = null;
             try {
-                await this.http.patch(`/todos/${todo.id}`, { status });
+                await this.http.patch(`${todo.id}`, { status });
                 todo.status = status;
             } catch (err) {
                 this.error = this._fmtErr(err, "Failed to update status");
@@ -298,7 +299,7 @@ export default {
             this.loading = true;
             this.error = null;
             try {
-                await this.http.patch(`/todos/${todo.id}`, { task });
+                await this.http.patch(`${todo.id}`, { task });
                 todo.task = task;
             } catch (err) {
                 this.error = this._fmtErr(err, "Failed to update task");
@@ -310,7 +311,7 @@ export default {
             this.loading = true;
             this.error = null;
             try {
-                await this.http.delete(`/todos/${id}`);
+                await this.http.delete(`${id}`);
                 this.todos = this.todos.filter((t) => t.id !== id);
             } catch (err) {
                 this.error = this._fmtErr(err, "Failed to delete todo");
