@@ -1,7 +1,15 @@
 <template>
     <div class="app">
         <header class="app-header">
-            <h1>{{ appTitle }}</h1>
+            <div class="header-title">
+                <img
+                    v-if="titleImage"
+                    :src="titleImage"
+                    alt="Title icon"
+                    class="title-image"
+                />
+                <h1>{{ appTitle }}</h1>
+            </div>
             <div class="header-actions">
                 <button class="btn" @click="fetchTodos" :disabled="loading">
                     Reload
@@ -200,6 +208,17 @@ export default {
                 null;
             return title || "My TODOS";
         },
+        titleImage() {
+            const base64 =
+                (typeof window !== "undefined" &&
+                    window.APP_CONFIG &&
+                    window.APP_CONFIG.TITLE_IMAGE_BASE64) ||
+                null;
+            if (base64) {
+                return `data:image/png;base64,${base64}`;
+            }
+            return "/favicon.ico";
+        },
         filteredTodos() {
             const status = (this.filterStatus || "").trim();
             if (!status) return this.todos;
@@ -388,6 +407,19 @@ body {
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 16px;
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.title-image {
+    height: 64px;
+    width: 64px;
+    object-fit: contain;
+    flex-shrink: 0;
 }
 
 .app-header h1 {

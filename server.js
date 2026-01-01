@@ -12,6 +12,7 @@
  * - HTML_DIR: Built dist directory (default: ./dist or /usr/share/nginx/html)
  * - STATIC_DIR: Static assets directory (default: ./static or {HTML_DIR}/static)
  * - USER: Optional; sets window.APP_CONFIG.TITLE
+ * - TITLE_IMAGE_BASE64: Optional; base64-encoded image to display next to title (defaults to static/img/todolist.ico)
  * - PORT: Server port (default: 8080)
  */
 
@@ -29,6 +30,7 @@ const PORT = parseInt(process.env.PORT || "8080", 10);
 const API_BASE_URL = process.env.API_BASE_URL;
 const USERNAME = process.env.USER || "";
 const TITLE = USERNAME ? `${USERNAME}'s TODOS` : "My TODOS";
+const TITLE_IMAGE_BASE64 = process.env.TITLE_IMAGE_BASE64 || "";
 
 if (!API_BASE_URL) {
   console.error(
@@ -59,10 +61,12 @@ const INDEX_HTML_PATH = path.join(HTML_DIR, "index.html");
 function generateRuntimeConfig() {
   const apiBase = JSON.stringify(API_BASE_URL);
   const title = JSON.stringify(TITLE);
+  const titleImageBase64 = JSON.stringify(TITLE_IMAGE_BASE64);
   return `(function() {
   window.APP_CONFIG = window.APP_CONFIG || {};
   window.APP_CONFIG.API_BASE_URL = ${apiBase};
   window.APP_CONFIG.TITLE = ${title};
+  window.APP_CONFIG.TITLE_IMAGE_BASE64 = ${titleImageBase64};
 })();\n`;
 }
 
@@ -154,4 +158,7 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`- STATIC_DIR: ${path.resolve(STATIC_DIR)}`);
   console.log(`- API_BASE_URL: ${API_BASE_URL}`);
   console.log(`- TITLE: ${TITLE}`);
+  console.log(
+    `- TITLE_IMAGE_BASE64: ${TITLE_IMAGE_BASE64 ? "(provided)" : "(not set, using default)"}`,
+  );
 });
