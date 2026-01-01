@@ -1,165 +1,151 @@
 # TodoList Vue Frontend
 
-## Subpath Deployment and BASE_PATH
-
-This app supports being served under any URL prefix (e.g., `/webui`) without hardcoding paths into the image.
-
-- Set `BASE_PATH` via environment variable on the frontend container:
-  - Example: `BASE_PATH=/webui`
-  - Default: `/`
-- The server mounts static assets and the SPA under `BASE_PATH`, so all requests are correctly served relative to this prefix.
-- All asset links in `index.html`, CSS, and client-side JavaScript are relative (e.g., `static/...`, `assets/...`, `config.js`, `src/main.js`) so the browser resolves them relative to the current page location under `BASE_PATH`.
-
-API configuration:
-- Set `API_BASE_URL` via environment variable to the **full API endpoint URL**. The frontend uses this directly for all API calls. Examples:
-  - `API_BASE_URL=http://localhost:8080` (local development)
-  - `API_BASE_URL=http://api-service:8080` (Kubernetes service)
-  - `API_BASE_URL=https://api.example.com` (external origin)
-  - `API_BASE_URL=/api` (same host, different path via ingress proxy)
-- The frontend makes calls to `GET`, `POST`, `PATCH`, `DELETE` directly on `API_BASE_URL` with no additional path prefixes.
-
-Ingress routing (no hardcoding in the image):
-- Route SPA: `BASE_PATH` (e.g., `/webui`) to the frontend service, passing the prefix through unchanged.
-- Route API: Map your API path (e.g., `/api`, `/todos`, or `/`) to the API service.
-- Avoid rewriting `/webui/*` to `/`; the server handles prefixed paths directly.
-- Ensure `API_BASE_URL` is set to the correct endpoint URL accessible from the browser.
-
-Troubleshooting:
-- 404s or HTML returned for JS/CSS (disallowed MIME type) typically indicate ingress rewriting paths incorrectly. Ensure `/webui/assets/*`, `/webui/static/*`, and `/webui/config.js` reach the frontend service unmodified.
-
-A minimal Vue 3 + Vite frontend that retrieves, displays, creates, updates, and deletes todos via the TodoList REST API. The API base URL is configurable via the Vite environment variable `VITE_API_BASE_URL`.
+A minimal Vue 3 + Vite frontend for the TodoList REST API.
 
 ## Prerequisites
 
 - Node.js 18+ and npm
-- The TodoList API running locally (default assumed: http://localhost:8080)
-
-API repository path: `todolist/todolist-api`
-
-Key endpoints:
-- GET `/todos`
-- GET `/todos/{id}`
-- POST `/todos` (body: `{ "task": "..." }`)
-- PUT/PATCH `/todos/{id}` (body: `{ "task"?: string, "status"?: "Todo" | "In Progress" | "Complete" }`)
-- DELETE `/todos/{id}`
-- GET `/livez`, `/readyz` (health)
+- The TodoList API running (default: http://localhost:8080)
 
 ## Quick Start
 
+### Development
+
 1. Install dependencies:
-   ```
-   cd todolist/todolist-vue
+   ```bash
    npm install
    ```
 
-2. Run the API locally (if not already running):
-   - Ensure you have a MySQL instance accessible and set environment variables:
-     - `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DB`, `MYSQL_HOST`, `MYSQL_TABLE`
-     - Optional: `PORT` (defaults to `8080`)
-   - Start the API (from `todolist/todolist-api`):
-     ```
-     cd ../todolist-api
-     go run .
-     ```
-   - Alternatively, run via Docker (see API README for details).
-
-3. Start the Vue dev server:
-   ```
-   cd ../todolist-vue
+2. Start the dev server:
+   ```bash
    npm run dev
    ```
-   - Open the printed local URL (typically http://localhost:5173).
-   - Dev server is configured to proxy `/todos`, `/livez`, `/readyz` to `http://localhost:8080` to avoid CORS. You can override the API base by setting `VITE_API_BASE_URL` in a `.env` or `.env.local` file (for example, `VITE_API_BASE_URL=http://localhost:8080`).
+   - Opens at http://localhost:5173
+   - Dev server proxies `/todos`, `/livez`, `/readyz` to http://localhost:8080 (no CORS issues)
 
-## Build for Production
+### Production Build
 
+1. Build for production:
+   ```bash
+   npm run build
+   ```
+   - Output in `dist/`
+
+2. Preview the production build locally:
+   ```bash
+   npm run preview
+   ```
+
+## Running in Container
+
+### Build the Docker Image
+
+```bash
+docker build -t todolist-vue:latest .
 ```
-cd todolist/todolist-vue
-npm run build
+
+### Run the Container
+
+```bash
+docker run -p 8080:8080 \
+  -e API_BASE_URL="/todos" \
+  -e USER="benny" \
+  todolist-vue:latest
 ```
 
-- Output will be generated in `dist/`.
-- You can preview the production build locally:
-  ```
-  npm run preview
-  ```
-- In production, you will need to serve the built files with a static server and ensure the frontend can reach the API.
-  - Option A: Host both behind the same domain and path, or configure your reverse proxy to route `/todos`, `/livez`, `/readyz` to the API.
-  - Option B: If serving API on a different origin, configure CORS on the API and set `VITE_API_BASE_URL` to the full API base URL (e.g., `https://api.example.com`) before building.
+Access at http://localhost:8080
 
-## Configuration Notes
+#### With Custom Title Image
 
-- Dev proxy is defined in `vite.config.js`:
-  - Proxies `/todos`, `/livez`, `/readyz` to `http://localhost:8080`.
-- The API base URL can be configured via `VITE_API_BASE_URL` (use `.env`/`.env.local`); if unset in development, the proxy is used.
-- The frontend assumes the API returns tasks with fields: `id`, `task`, and optionally `status` (defaults to `Todo` if missing).
-- Valid statuses: `Todo`, `In Progress`, `Complete`.
+```bash
+docker run -p 8080:8080 \
+  -e API_BASE_URL="/todos" \
+  -e USER="benny" \
+  -e TITLE_IMAGE_BASE64="$(base64 -w 0 icon.png)" \
+  todolist-vue:latest
+```
 
-### Deploying behind a subpath (Ingress)
+#### Environment Variables
 
-This app can be served from any subpath (e.g., `/webui`) without hardcoding that path. Key points:
+- `API_BASE_URL` (required): Full URL or path for API calls
+  - Example: `/todos` (same host, proxied by reverse proxy)
+  - Example: `http://localhost:8080` (direct URL)
+- `USER` (optional): Sets the page title to "{USER}'s TODOS"
+- `TITLE_IMAGE_BASE64` (optional): Base64-encoded image to display next to the title (64×64px)
+  - Use a small image (the image is displayed at 64×64px regardless of original size)
+  - Example: `TITLE_IMAGE_BASE64="$(base64 -w 0 icon.png)"`
+- `PORT` (optional): Server port, defaults to `8080`
 
-- Build/runtime behavior
-  - Built assets use a relative base (so asset/script URLs resolve under the current path).
-  - The Node server serves:
-    - `index.html` with normalized relative asset paths
-    - `assets/*` and `static/*` from the build
-    - `config.js` generated at runtime from environment variables
-    - `favicon.ico` from `static/img/todolist.ico`
-  - All of the above also work when requested under a prefix, e.g., `/webui/assets/*`, `/webui/static/*`, `/webui/config.js`, `/webui/favicon.ico`.
+## API Configuration
 
-- Ingress routing (no hardcoded paths in the image)
-  - Route SPA: `/webui` (path prefix) to the frontend service. Do not strip the prefix; pass the request path through unchanged.
-  - Route API: `/todos` (and optionally `/livez`, `/readyz`) to the API service.
-  - Avoid rewrite rules that force `/webui/*` to `/` — the server handles prefixed paths directly.
+The frontend calls the API at the path/URL specified in `API_BASE_URL`.
 
-- Runtime environment (configure via container env, not baked in)
-  - `API_BASE_URL` — where the frontend will call the API from the browser:
-    - Example for ingress: `API_BASE_URL=/todos`
-    - Example for external origin: `API_BASE_URL=https://api.example.com`
-  - `USER` — optional; controls window title (`"<USER>'s TODOS"` if set).
-  - `PORT` — optional; defaults to `8080`.
+### Development
 
-- Expected requests under `/webui`
-  - `/webui/` → SPA index
-  - `/webui/assets/*` → built JS/CSS/assets
-  - `/webui/static/*` → static assets
-  - `/webui/config.js` → runtime configuration
-  - `/webui/favicon.ico` → favicon
+Dev proxy in `vite.config.js` handles CORS automatically. No special configuration needed if API is at http://localhost:8080.
 
-- Troubleshooting subpath issues
-  - 404s for `/assets/*` or `/config.js` at the root (e.g., `http://host/assets/...`):
-    - Ensure ingress is routing `/webui/*` to the frontend (not rewriting to `/`).
-    - The app references assets relatively; if ingress strips `/webui`, asset paths will break.
-  - “Disallowed MIME type (text/html)” for JS/CSS:
-    - Ensure `/webui/assets/*` and `/webui/static/*` are routed to the frontend service and not rewritten to the SPA index.
-  - API calls failing:
-    - Set `API_BASE_URL` to `/todos` (for same-ingress routing) or a full origin.
-    - If cross-origin, enable CORS on the API.
+### Production
 
-## Troubleshooting
+Set `API_BASE_URL` to the API endpoint:
 
-- Frontend shows “Failed to load todos”:
-  - Confirm API is running and reachable at `http://localhost:8080`.
-  - Check dev server logs and browser console for network errors.
-  - Verify `vite.config.js` proxy settings and that you started the dev server via `npm run dev`.
+- **Same host, different path**: `API_BASE_URL=/todos`
+- **Different host**: `API_BASE_URL=http://api.example.com`
+- **Kubernetes service**: `API_BASE_URL=http://todo-api:8080`
 
-- API readiness probes failing:
-  - Check `GET /readyz` and database connectivity.
-  - Verify MySQL credentials and that `MYSQL_TABLE` exists or is creatable.
+## API Endpoints
 
-- CORS errors in production:
-  - Serve both apps under the same origin, or enable CORS on the API and point the frontend `axios` base URL to the API origin.
+The TodoList API provides:
+
+- `GET /todos` — List all todos
+- `GET /todos/{id}` — Get a specific todo
+- `POST /todos` — Create a todo (body: `{ "task": "..." }`)
+- `PATCH /todos/{id}` — Update a todo (body: `{ "task"?: string, "status"?: string }`)
+- `DELETE /todos/{id}` — Delete a todo
+- `GET /livez` — Liveness probe
+- `GET /readyz` — Readiness probe
+
+Supported statuses: `Todo`, `In Progress`, `Complete`
 
 ## Scripts
 
-- `npm run dev` — Start Vite dev server (with proxy)
-- `npm run build` — Build production assets
-- `npm run preview` — Preview the production build
+- `npm run dev` — Start Vite dev server with proxy
+- `npm run build` — Build for production
+- `npm run preview` — Preview production build
+
+## Troubleshooting
+
+**"Failed to load todos" error**
+- Confirm API is running at the configured `API_BASE_URL`
+- Check browser console for network errors
+- In dev: Ensure `npm run dev` started successfully
+
+**API not reachable in container**
+- Verify `API_BASE_URL` is correct for your network setup
+- If using Docker networking, use service name: `http://todo-api:8080`
+- If behind a reverse proxy, set `API_BASE_URL` to the proxied path or full URL
+
+## Title Image
+
+The title image (64×64px) is displayed next to the page title in the header. By default, it shows the TodoList icon (`/favicon.ico`).
+
+To use a custom image, pass it as a base64-encoded string:
+
+```bash
+docker run -p 8080:8080 \
+  -e API_BASE_URL="/todos" \
+  -e TITLE_IMAGE_BASE64="$(base64 -w 0 icon.png)" \
+  todolist-vue:latest
+```
+
+**Supported Image Formats:** PNG, JPG, GIF, SVG, WebP, and any format browsers support.
+
+While images are automatically scaled to 64×64px regardless of original size, it is recommended to provide a low-resolution image to bypass command line length limitations.
 
 ## Project Structure
 
-- `index.html` — Minimal HTML with `#app` mount point
-- `src/main.js` — Vue app (fetches, creates, updates, deletes todos with Axios)
-- `vite.config.js` — Vue plugin and dev proxy config
-- `package.json` — Dependencies and scripts
+- `index.html` — HTML entry point
+- `src/main.js` — Vue app entry point
+- `src/App.vue` — Main component (todos management)
+- `vite.config.js` — Build and dev server config
+- `server.js` — Express server for production
+- `dist/` — Production build output
