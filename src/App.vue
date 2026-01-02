@@ -87,6 +87,25 @@
                     {{ s }}
                 </option>
             </select>
+            <label for="sort" class="label">Sort:</label>
+            <select
+                id="sort"
+                class="select"
+                v-model="sortBy"
+                aria-label="Sort by field"
+            >
+                <option value="">None</option>
+                <option value="id">ID</option>
+                <option value="status">Status</option>
+            </select>
+            <button
+                class="btn"
+                @click="toggleReverse"
+                :title="sortReverse ? 'Ascending' : 'Descending'"
+                aria-label="Toggle sort order"
+            >
+                {{ sortReverse ? "↓" : "↑" }}
+            </button>
         </section>
 
         <div v-if="filteredTodos.length === 0" class="empty">
@@ -193,6 +212,8 @@ export default {
             newTask: "",
             newStatus: "Todo", // default; not shown in Add Todo form
             filterStatus: "",
+            sortBy: "",
+            sortReverse: false,
             theme: savedTheme,
         };
     },
@@ -221,8 +242,34 @@ export default {
         },
         filteredTodos() {
             const status = (this.filterStatus || "").trim();
-            if (!status) return this.todos;
-            return this.todos.filter((t) => (t.status || "Todo") === status);
+            let result = this.todos;
+
+            // Apply filter
+            if (status) {
+                result = result.filter((t) => (t.status || "Todo") === status);
+            }
+
+            // Apply sorting
+            if (this.sortBy) {
+                result = [...result].sort((a, b) => {
+                    let aVal = a[this.sortBy];
+                    let bVal = b[this.sortBy];
+
+                    if (this.sortBy === "id") {
+                        aVal = Number(aVal);
+                        bVal = Number(bVal);
+                    } else if (this.sortBy === "status") {
+                        aVal = String(aVal || "Todo");
+                        bVal = String(bVal || "Todo");
+                    }
+
+                    if (aVal < bVal) return this.sortReverse ? 1 : -1;
+                    if (aVal > bVal) return this.sortReverse ? -1 : 1;
+                    return 0;
+                });
+            }
+
+            return result;
         },
     },
     async created() {
@@ -337,6 +384,9 @@ export default {
             } finally {
                 this.loading = false;
             }
+        },
+        toggleReverse() {
+            this.sortReverse = !this.sortReverse;
         },
     },
 };
