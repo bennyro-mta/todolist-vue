@@ -31,7 +31,7 @@ const USERNAME = process.env.USER || "";
 const TITLE = USERNAME ? `${USERNAME}'s TODOS` : "My TODOS";
 
 console.log(
-  `[startup] Looking for title image at: /opt/images/title-image.b64`,
+  `[startup] Looking for title image at: /opt/images/title-image.png`,
 );
 
 if (!API_BASE_URL) {
@@ -139,21 +139,25 @@ app.get("/favicon.ico", (req, res) => {
 });
 
 // Serve title image from file if it exists
-app.get("/title-image.b64", (req, res) => {
-  const titleImagePath = "/opt/images/title-image.b64";
-  console.log(`[title-image.b64] Attempting to read: ${titleImagePath}`);
-  fs.readFile(titleImagePath, "utf8", (err, data) => {
+app.get("/title-image.png", (req, res) => {
+  const titleImagePath = "/opt/images/title-image.png";
+  console.log(`[title-image.png] Attempting to read: ${titleImagePath}`);
+  res.sendFile(titleImagePath, (err) => {
     if (err) {
       console.error(
-        `[title-image.b64] Error reading file: ${err.code} - ${err.message}`,
+        `[title-image.png] Error reading file: ${err.code} - ${err.message}`,
       );
-      return res.status(404).json({ error: "Title image not found" });
+      console.log(`[title-image.png] Falling back to todolist.ico`);
+      const fallbackPath = path.join(__dirname, "static/img/todolist.ico");
+      res.sendFile(fallbackPath, (fallbackErr) => {
+        if (fallbackErr) {
+          console.error(
+            `[title-image.png] Error reading fallback file: ${fallbackErr.code} - ${fallbackErr.message}`,
+          );
+          return res.status(404).json({ error: "Title image not found" });
+        }
+      });
     }
-    const base64 = data.replace(/\s/g, "");
-    console.log(
-      `[title-image.b64] Successfully read ${data.length} bytes, cleaned to ${base64.length} bytes`,
-    );
-    res.type("text/plain; charset=utf-8").send(base64);
   });
 });
 
