@@ -215,6 +215,7 @@ export default {
             sortBy: "",
             sortReverse: false,
             theme: savedTheme,
+            titleImageData: null,
         };
     },
     computed: {
@@ -230,13 +231,8 @@ export default {
             return title || "My TODOS";
         },
         titleImage() {
-            const base64 =
-                (typeof window !== "undefined" &&
-                    window.APP_CONFIG &&
-                    window.APP_CONFIG.TITLE_IMAGE_BASE64) ||
-                null;
-            if (base64) {
-                return `data:image/png;base64,${base64}`;
+            if (this.titleImageData) {
+                return this.titleImageData;
             }
             return "/favicon.ico";
         },
@@ -274,6 +270,7 @@ export default {
     },
     async created() {
         this.applyTheme(this.theme);
+        await this.loadTitleImage();
         await this.fetchTodos().catch((err) => {
             const msg = err?.message || "fetchTodos failed";
             console.error("[App.vue] created() fetchTodos error:", msg, err);
@@ -387,6 +384,34 @@ export default {
         },
         toggleReverse() {
             this.sortReverse = !this.sortReverse;
+        },
+        async loadTitleImage() {
+            try {
+                const response = await fetch("/title-image.b64");
+                if (response.ok) {
+                    const base64 = await response.text();
+                    const trimmed = base64.trim();
+                    if (trimmed && /^[A-Za-z0-9+/=]+$/.test(trimmed)) {
+                        this.titleImageData = `data:image/png;base64,${trimmed}`;
+                        console.debug(
+                            "[App.vue] loadTitleImage: Image loaded successfully",
+                        );
+                    } else {
+                        console.warn(
+                            "[App.vue] loadTitleImage: Invalid base64 content",
+                        );
+                    }
+                } else {
+                    console.debug(
+                        "[App.vue] loadTitleImage: File not found (404)",
+                    );
+                }
+            } catch (err) {
+                console.debug(
+                    "[App.vue] loadTitleImage: Error fetching image",
+                    err,
+                );
+            }
         },
     },
 };

@@ -12,7 +12,6 @@
  * - HTML_DIR: Built dist directory (default: ./dist or /usr/share/nginx/html)
  * - STATIC_DIR: Static assets directory (default: ./static or {HTML_DIR}/static)
  * - USER: Optional; sets window.APP_CONFIG.TITLE
- * - TITLE_IMAGE_BASE64: Optional; base64-encoded image to display next to title (defaults to static/img/todolist.ico)
  * - PORT: Server port (default: 8080)
  */
 
@@ -30,7 +29,10 @@ const PORT = parseInt(process.env.PORT || "8080", 10);
 const API_BASE_URL = process.env.API_BASE_URL;
 const USERNAME = process.env.USER || "";
 const TITLE = USERNAME ? `${USERNAME}'s TODOS` : "My TODOS";
-const TITLE_IMAGE_BASE64 = process.env.TITLE_IMAGE_BASE64 || "";
+
+console.log(
+  `[startup] Looking for title image at: /opt/images/title-image.b64`,
+);
 
 if (!API_BASE_URL) {
   console.error(
@@ -61,12 +63,10 @@ const INDEX_HTML_PATH = path.join(HTML_DIR, "index.html");
 function generateRuntimeConfig() {
   const apiBase = JSON.stringify(API_BASE_URL);
   const title = JSON.stringify(TITLE);
-  const titleImageBase64 = JSON.stringify(TITLE_IMAGE_BASE64);
   return `(function() {
   window.APP_CONFIG = window.APP_CONFIG || {};
   window.APP_CONFIG.API_BASE_URL = ${apiBase};
   window.APP_CONFIG.TITLE = ${title};
-  window.APP_CONFIG.TITLE_IMAGE_BASE64 = ${titleImageBase64};
 })();\n`;
 }
 
@@ -138,6 +138,25 @@ app.get("/favicon.ico", (req, res) => {
   });
 });
 
+// Serve title image from file if it exists
+app.get("/title-image.b64", (req, res) => {
+  const titleImagePath = "/opt/images/title-image.b64";
+  console.log(`[title-image.b64] Attempting to read: ${titleImagePath}`);
+  fs.readFile(titleImagePath, "utf8", (err, data) => {
+    if (err) {
+      console.error(
+        `[title-image.b64] Error reading file: ${err.code} - ${err.message}`,
+      );
+      return res.status(404).json({ error: "Title image not found" });
+    }
+    const base64 = data.replace(/\s/g, "");
+    console.log(
+      `[title-image.b64] Successfully read ${data.length} bytes, cleaned to ${base64.length} bytes`,
+    );
+    res.type("text/plain; charset=utf-8").send(base64);
+  });
+});
+
 // SPA fallback: serve index.html for all other requests
 app.get("*", (req, res) => {
   // Don't serve index.html for direct file requests (has extension)
@@ -158,7 +177,4 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`- STATIC_DIR: ${path.resolve(STATIC_DIR)}`);
   console.log(`- API_BASE_URL: ${API_BASE_URL}`);
   console.log(`- TITLE: ${TITLE}`);
-  console.log(
-    `- TITLE_IMAGE_BASE64: ${TITLE_IMAGE_BASE64 ? "(provided)" : "(not set, using default)"}`,
-  );
 });
